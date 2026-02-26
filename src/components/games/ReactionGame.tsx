@@ -16,7 +16,7 @@ const ReactionGame = ({ onScore, disabled }: Props) => {
     if (disabled) return;
     setPhase('ready');
     setReactionTime(null);
-    const delay = 1000 + Math.random() * 3000;
+    const delay = 400 + Math.random() * 1800;
     timerRef.current = setTimeout(() => {
       goTimeRef.current = performance.now();
       setPhase('go');
@@ -28,20 +28,20 @@ const ReactionGame = ({ onScore, disabled }: Props) => {
     if (phase === 'ready') {
       clearTimeout(timerRef.current);
       setPhase('early');
-      setTimeout(() => setPhase('wait'), 1000);
+      setTimeout(() => setPhase('wait'), 400);
     } else if (phase === 'go') {
       const rt = Math.round(performance.now() - goTimeRef.current);
       setReactionTime(rt);
       const points = Math.max(5, Math.round(50 - (rt / 10)));
       onScore(points);
       setPhase('tapped');
-      setTimeout(() => setPhase('wait'), 1200);
+      setTimeout(() => setPhase('wait'), 500);
     }
   };
 
   useEffect(() => {
     if (phase === 'wait' && !disabled) {
-      const t = setTimeout(startRound, 500);
+      const t = setTimeout(startRound, 150);
       return () => clearTimeout(t);
     }
   }, [phase, disabled]);
