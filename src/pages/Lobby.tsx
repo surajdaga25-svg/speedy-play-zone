@@ -1,9 +1,9 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePlayer } from '@/context/PlayerContext';
 import { motion } from 'framer-motion';
 import { Zap, Trophy, User, LogOut } from 'lucide-react';
 import PlayerHUD from '@/components/PlayerHUD';
-
 const GAMES = [
   { id: 'reaction', name: 'Reaction Tap', emoji: '⚡', desc: 'Tap when green!', color: 'box-glow-green border-neon-green/30' },
   { id: 'trivia', name: 'Trivia Duel', emoji: '🧠', desc: 'Outsmart your rival', color: 'box-glow-purple border-neon-purple/30' },
@@ -14,10 +14,11 @@ const Lobby = () => {
   const navigate = useNavigate();
   const { player, setPlayer } = usePlayer();
 
-  if (!player) {
-    navigate('/');
-    return null;
-  }
+  useEffect(() => {
+    if (!player) navigate('/');
+  }, [player, navigate]);
+
+  if (!player) return null;
 
   const handlePlay = (gameId: string) => {
     navigate(`/matchmaking/${gameId}`);
