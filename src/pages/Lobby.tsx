@@ -5,9 +5,10 @@ import { motion } from 'framer-motion';
 import { Zap, Trophy, User, LogOut } from 'lucide-react';
 import PlayerHUD from '@/components/PlayerHUD';
 const GAMES = [
-  { id: 'reaction', name: 'Reaction Tap', emoji: '⚡', desc: 'Tap when green!', color: 'box-glow-green border-neon-green/30' },
-  { id: 'trivia', name: 'Trivia Duel', emoji: '🧠', desc: 'Outsmart your rival', color: 'box-glow-purple border-neon-purple/30' },
-  { id: 'scramble', name: 'Word Scramble', emoji: '🔤', desc: 'Unscramble fastest', color: 'box-glow-pink border-neon-pink/30' },
+  { id: 'memory', name: 'Memory Tiles', emoji: '🧩', desc: 'Remember the pattern!', color: 'box-glow-green border-neon-green/30' },
+  { id: 'reaction', name: 'Reaction Tap', emoji: '⚡', desc: 'Tap when green!', color: 'box-glow-purple border-neon-purple/30' },
+  { id: 'trivia', name: 'Trivia Duel', emoji: '🧠', desc: 'Outsmart your rival', color: 'box-glow-pink border-neon-pink/30' },
+  { id: 'scramble', name: 'Word Scramble', emoji: '🔤', desc: 'Unscramble fastest', color: 'box-glow-purple border-neon-purple/30' },
 ];
 
 const Lobby = () => {
