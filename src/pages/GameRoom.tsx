@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactionGame from '@/components/games/ReactionGame';
 import TriviaGame from '@/components/games/TriviaGame';
 import ScrambleGame from '@/components/games/ScrambleGame';
+import MemoryTilesGame from '@/components/games/MemoryTilesGame';
 import EmojiChat from '@/components/EmojiChat';
 
 const GameRoom = () => {
@@ -118,6 +119,7 @@ const GameRoom = () => {
           )}
         </AnimatePresence>
 
+        {gameId === 'memory' && <MemoryTilesGame onScore={handleScore} disabled={gameOver} />}
         {gameId === 'reaction' && <ReactionGame onScore={handleScore} disabled={gameOver} />}
         {gameId === 'trivia' && <TriviaGame onScore={handleScore} disabled={gameOver} />}
         {gameId === 'scramble' && <ScrambleGame onScore={handleScore} disabled={gameOver} />}
