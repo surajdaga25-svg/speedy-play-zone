@@ -38,9 +38,8 @@ export function sendMemeNotification() {
     icon: '/placeholder.svg',
     badge: '/placeholder.svg',
     tag: `meme-${Date.now()}`,
-    renotify: true,
     silent: false,
-  });
+  } as NotificationOptions);
 
   notification.onclick = () => {
     window.focus();
