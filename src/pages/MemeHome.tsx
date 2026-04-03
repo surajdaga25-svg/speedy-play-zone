@@ -1,24 +1,39 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Settings, Volume2, VolumeX } from 'lucide-react';
+import { Zap, Settings, Volume2, VolumeX, Bell, BellOff, Smartphone } from 'lucide-react';
 import MemePopup from '@/components/MemePopup';
 import { getRandomMeme } from '@/lib/memes';
+import {
+  requestNotificationPermission,
+  getBgSettings,
+  saveBgSettings,
+  startBackgroundMemes,
+  stopBackgroundMemes,
+  sendMemeNotification,
+} from '@/lib/notifications';
 
 type ActiveMeme = ReturnType<typeof getRandomMeme> & { x: number; y: number };
 
 export default function MemeHome() {
   const [memes, setMemes] = useState<ActiveMeme[]>([]);
   const [autoMode, setAutoMode] = useState(false);
-  const [interval, setIntervalTime] = useState(5); // seconds
+  const [interval, setIntervalTime] = useState(5);
   const [totalSeen, setTotalSeen] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
+
+  // Background notification state
+  const [bgEnabled, setBgEnabled] = useState(() => getBgSettings().enabled);
+  const [bgInterval, setBgInterval] = useState(() => getBgSettings().intervalMinutes);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
+    'Notification' in window ? Notification.permission : 'denied'
+  );
 
   const spawnMeme = useCallback(() => {
     const m = getRandomMeme();
     const x = 20 + Math.random() * 60;
     const y = 20 + Math.random() * 50;
-    setMemes(prev => [...prev.slice(-4), { ...m, x, y }]); // max 5 popups
+    setMemes(prev => [...prev.slice(-4), { ...m, x, y }]);
     setTotalSeen(p => p + 1);
   }, []);
 
@@ -31,12 +46,60 @@ export default function MemeHome() {
     setTimeout(spawnMeme, 200);
   };
 
-  // Auto mode
+  // Auto mode (in-app)
   useEffect(() => {
     if (!autoMode) return;
     const id = window.setInterval(spawnMeme, interval * 1000);
     return () => clearInterval(id);
   }, [autoMode, interval, spawnMeme]);
+
+  // Background notifications toggle
+  const toggleBgNotifications = async () => {
+    if (!bgEnabled) {
+      const granted = await requestNotificationPermission();
+      setNotifPermission(Notification.permission);
+      if (!granted) return;
+      setBgEnabled(true);
+      saveBgSettings({ enabled: true, intervalMinutes: bgInterval });
+      startBackgroundMemes(bgInterval);
+    } else {
+      setBgEnabled(false);
+      saveBgSettings({ enabled: false, intervalMinutes: bgInterval });
+      stopBackgroundMemes();
+    }
+  };
+
+  const updateBgInterval = (mins: number) => {
+    setBgInterval(mins);
+    saveBgSettings({ enabled: bgEnabled, intervalMinutes: mins });
+    if (bgEnabled) {
+      startBackgroundMemes(mins);
+    }
+  };
+
+  // Restore bg notifications on mount
+  useEffect(() => {
+    const settings = getBgSettings();
+    if (settings.enabled && Notification.permission === 'granted') {
+      startBackgroundMemes(settings.intervalMinutes);
+    }
+    return () => stopBackgroundMemes();
+  }, []);
+
+  // Send notification when app is hidden (visibility change)
+  useEffect(() => {
+    if (!bgEnabled) return;
+    const handleVisibility = () => {
+      if (document.hidden) {
+        // App went to background — send a meme notification after a short delay
+        setTimeout(() => {
+          if (document.hidden) sendMemeNotification();
+        }, 3000);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [bgEnabled]);
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden relative">
@@ -97,9 +160,10 @@ export default function MemeHome() {
             className="relative z-20 mx-4 sm:mx-8 mb-4 p-4 rounded-xl bg-card border border-border"
           >
             <h3 className="text-sm font-semibold text-foreground mb-3">⚙️ Popup Settings</h3>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
+              {/* In-app auto mode */}
               <label className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Auto-popup mode</span>
+                <span className="text-sm text-muted-foreground">Auto-popup (in-app)</span>
                 <button
                   onClick={() => setAutoMode(!autoMode)}
                   className={`w-12 h-6 rounded-full transition-colors relative ${autoMode ? 'bg-primary' : 'bg-muted'}`}
@@ -111,7 +175,7 @@ export default function MemeHome() {
                 </button>
               </label>
               <label className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Interval: {interval}s</span>
+                <span className="text-sm text-muted-foreground">In-app interval: {interval}s</span>
                 <input
                   type="range"
                   min={2}
@@ -121,6 +185,56 @@ export default function MemeHome() {
                   className="w-32 accent-primary"
                 />
               </label>
+
+              {/* Divider */}
+              <div className="border-t border-border" />
+
+              {/* Background notifications */}
+              <div className="flex items-center gap-2 mb-1">
+                <Smartphone className="w-4 h-4 text-accent" />
+                <span className="text-sm font-semibold text-accent">Background Memes</span>
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Get meme notifications even when the app is minimized or your phone is locked!
+              </p>
+
+              {notifPermission === 'denied' && (
+                <p className="text-xs text-destructive">
+                  ⚠️ Notifications are blocked. Please enable them in your browser/phone settings.
+                </p>
+              )}
+
+              <label className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {bgEnabled ? <Bell className="w-4 h-4 text-primary" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
+                  <span className="text-sm text-muted-foreground">
+                    {bgEnabled ? 'Background memes ON' : 'Background memes OFF'}
+                  </span>
+                </div>
+                <button
+                  onClick={toggleBgNotifications}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${bgEnabled ? 'bg-accent' : 'bg-muted'}`}
+                >
+                  <motion.div
+                    animate={{ x: bgEnabled ? 24 : 2 }}
+                    className="absolute top-1 w-4 h-4 rounded-full bg-foreground"
+                  />
+                </button>
+              </label>
+
+              {bgEnabled && (
+                <label className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Every {bgInterval} min</span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={60}
+                    value={bgInterval}
+                    onChange={(e) => updateBgInterval(Number(e.target.value))}
+                    className="w-32 accent-accent"
+                  />
+                </label>
+              )}
             </div>
           </motion.div>
         )}
@@ -139,7 +253,7 @@ export default function MemeHome() {
             Ready for chaos?
           </h2>
           <p className="text-muted-foreground text-sm sm:text-base max-w-md">
-            Tap the button to unleash random meme popups. Turn on auto-mode for maximum chaos. You've been warned.
+            Tap the button for in-app memes, or enable <strong className="text-accent">Background Memes</strong> in settings to get meme notifications on your lock screen & over other apps!
           </p>
         </motion.div>
 
@@ -153,16 +267,28 @@ export default function MemeHome() {
           GIMME A MEME
         </motion.button>
 
-        {autoMode && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ repeat: Infinity, duration: 2 }}
-            className="text-xs text-accent font-semibold"
-          >
-            🔴 AUTO-MODE ACTIVE — Memes incoming every {interval}s
-          </motion.p>
-        )}
+        <div className="flex gap-3">
+          {autoMode && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+              className="text-xs text-accent font-semibold"
+            >
+              🔴 AUTO-MODE ACTIVE — every {interval}s
+            </motion.p>
+          )}
+          {bgEnabled && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ repeat: Infinity, duration: 2.5 }}
+              className="text-xs text-primary font-semibold"
+            >
+              📱 BG MEMES ON — every {bgInterval}min
+            </motion.p>
+          )}
+        </div>
       </div>
 
       {/* Meme Popups */}
