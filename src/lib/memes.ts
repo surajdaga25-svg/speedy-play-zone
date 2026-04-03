@@ -59,5 +59,5 @@ export function getRandomMeme() {
   const source = MEME_SOURCES[Math.floor(Math.random() * MEME_SOURCES.length)];
   const caption = FUNNY_CAPTIONS[Math.floor(Math.random() * FUNNY_CAPTIONS.length)];
   const title = POPUP_TITLES[Math.floor(Math.random() * POPUP_TITLES.length)];
-  return { ...source, caption, title, id: crypto.randomUUID() };
+  return { imageUrl: source.url, caption, title, id: crypto.randomUUID() };
 }
